@@ -1,28 +1,6 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-// Define inline types for User and Vendor to avoid missing module error
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  type: 'vendor' | 'customer' | 'admin';
-};
-
-type Vendor = {
-  id: number;
-  userId: number;
-  shopName: string;
-  ownerName: string;
-  category: string;
-  address: string;
-  location: { lat: number; lng: number };
-  workingHours: string;
-  description: string;
-  paymentMethods: string[];
-  status: 'approved' | 'pending' | 'rejected';
-};
+import type { User, Vendor } from './types';
 
 const app = express();
 const port = 4000;

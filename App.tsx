@@ -3,6 +3,7 @@ import type { User, Language, Page, AppContextType } from './types';
 import { AppContext } from './contexts/AppContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import Chatbot from './components/Chatbot';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -10,7 +11,7 @@ import MarketplacePage from './pages/MarketplacePage';
 import VendorProfilePage from './pages/VendorProfilePage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
-import { mockUsers } from './services/api';
+import { fetchUsers } from './services/api';
 
 const App: React.FC = () => {
   const [page, setPage] = useState<Page>('home');
@@ -18,18 +19,24 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>('en');
   const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null);
 
-  const login = useCallback((email: string, userType: 'customer' | 'vendor' | 'admin') => {
-    const foundUser = mockUsers.find(u => u.email === email && u.type === userType);
-    if (foundUser) {
-      setUser(foundUser);
-      if (foundUser.type === 'admin') {
-        setPage('admin');
-      } else {
-        setPage('dashboard');
+  const login = useCallback(async (email: string, userType: 'customer' | 'vendor' | 'admin') => {
+    try {
+      const users = await fetchUsers();
+      const foundUser = users.find(u => u.email === email && u.type === userType);
+      if (foundUser) {
+        setUser(foundUser);
+        if (foundUser.type === 'admin') {
+          setPage('admin');
+        } else {
+          setPage('dashboard');
+        }
+        return true;
       }
-      return true;
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   }, []);
 
   const logout = useCallback(() => {
@@ -82,6 +89,7 @@ const App: React.FC = () => {
           {renderPage()}
         </main>
         <Footer />
+        <Chatbot />
       </div>
     </AppContext.Provider>
   );

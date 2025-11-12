@@ -10,10 +10,10 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const t = translations[language];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const success = login(email, userType);
+    const success = await login(email, userType);
     if (!success) {
       setError('Invalid credentials. Please try again.');
     }

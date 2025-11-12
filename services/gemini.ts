@@ -1,76 +1,68 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { ChatMessage, GroundingChunk } from '../types';
 
-let ai: GoogleGenAI | null = null;
-const model = 'gemini-2.5-flash';
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-// This function safely initializes and returns the AI client singleton.
-function getAiInstance(): GoogleGenAI | null {
-  if (ai) return ai;
-  
-  const API_KEY = process.env.API_KEY;
-  if (!API_KEY) {
-    console.warn("API key not found. Chatbot will not function.");
-    return null;
-  }
-  
-  ai = new GoogleGenAI({ apiKey: API_KEY });
-  return ai;
+export interface ChatbotResponse {
+  text: string;
+  grounding?: GroundingChunk[];
 }
 
-const systemInstruction = `You are a helpful and friendly assistant for "Nashik LocalKart", a web application that helps users find local shops and services in Nashik, India.
-Your primary goal is to answer user queries about vendors, their locations, services, and operating hours.
-Use the provided tools (Google Search and Google Maps) to find the most accurate and up-to-date information.
-If a user asks about a location, leverage the Google Maps tool, especially if the user has provided their current location.
-Keep your answers concise and relevant.
-If you can, respond in the language of the user's query (English or Marathi).`;
-
-export const getChatbotResponse = async (
-  prompt: string,
-  history: ChatMessage[],
-  location: { latitude: number; longitude: number } | null
-): Promise<{ text: string; grounding: GroundingChunk[] }> => {
-  const aiInstance = getAiInstance();
-
-  if (!aiInstance) {
-    return {
-      text: "I'm sorry, but I'm unable to connect to my services right now as my API key is missing. Please contact the administrator.",
-      grounding: [],
-    };
-  }
-
+export async function getChatbotResponse(
+  userMessage: string,
+  chatHistory: ChatMessage[],
+  location?: { latitude: number; longitude: number }
+): Promise<ChatbotResponse> {
   try {
-    const chatHistory = history.map(msg => ({
-        role: msg.role,
-        parts: [{ text: msg.text }]
-    }));
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const result = await aiInstance.models.generateContent({
-        model: model,
-        contents: [...chatHistory, { role: 'user', parts: [{ text: prompt }] }],
-        config: {
-            systemInstruction: systemInstruction,
-            tools: [{ googleSearch: {} }, { googleMaps: {} }],
-        },
-        toolConfig: location ? {
-            retrievalConfig: {
-                latLng: {
-                    latitude: location.latitude,
-                    longitude: location.longitude,
-                },
-            },
-        } : undefined,
-    });
-    
-    const response = result;
-    const grounding = (response.candidates?.[0]?.groundingMetadata?.groundingChunks as GroundingChunk[]) || [];
+    // Build context with location and vendor information
+    let contextPrompt = `You are a helpful assistant for Nashik LocalKart, a platform connecting local vendors and customers in Nashik, Maharashtra, India.
 
-    return { text: response.text, grounding };
-  } catch (error) {
-    console.error("Error getting response from Gemini:", error);
+Key information about Nashik LocalKart:
+- Bilingual platform (English and Marathi)
+- Focus on "Vocal for Local" initiative
+- Main areas: Mhasrul, Panchavati, Tidke Nagar, Gangapur Road, College Road
+- Vendor categories: Food, Grocery, Tailor, Electronics, Chemist, General Store, Cafe
+
+Available vendors in the system:
+- Bhavani Sweets & Snacks (Food) - Mhasrul Link Road
+- Modern Tailors (Tailor) - Panchavati Karanja
+- Nashik Kirana Store (Grocery) - Near Mhasrul Police Station
+- Digital World Electronics (Electronics) - Opposite BYK College
+- Wellness Medical (Chemist) - Serene Meadows, Gangapur Road
+- Cafe Brewpoint (Cafe) - Near Ramkund, Panchavati
+
+`;
+
+    if (location) {
+      contextPrompt += `User's current location: Latitude ${location.latitude}, Longitude ${location.longitude} (approximately Nashik area)\n\n`;
+    }
+
+    contextPrompt += `Please provide helpful, accurate information about local vendors, directions, or general questions about Nashik. If asked about vendors not in our system, suggest similar alternatives or general advice.
+
+Chat history:
+${chatHistory.map(msg => `${msg.role}: ${msg.text}`).join('\n')}
+
+User's new message: ${userMessage}
+
+Respond in a helpful, friendly manner. If providing vendor information, include relevant details like location, contact info, and services.`;
+
+    const result = await model.generateContent(contextPrompt);
+    const response = await result.response;
+    const text = response.text();
+
+    // For now, return without grounding chunks (can be enhanced later)
     return {
-      text: "I'm sorry, I encountered an error while processing your request. Please try again later.",
-      grounding: [],
+      text: text,
+      grounding: []
+    };
+
+  } catch (error) {
+    console.error('Gemini API error:', error);
+    return {
+      text: 'Sorry, I encountered an error while processing your request. Please try again later.',
+      grounding: []
     };
   }
-};
+}

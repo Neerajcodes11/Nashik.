@@ -31,7 +31,7 @@ export interface Vendor {
 
 export interface AppContextType {
   user: User | null;
-  login: (email: string, userType: 'customer' | 'vendor' | 'admin') => boolean;
+  login: (email: string, userType: 'customer' | 'vendor' | 'admin') => Promise<boolean>;
   logout: () => void;
   language: Language;
   setLanguage: React.Dispatch<React.SetStateAction<Language>>;
