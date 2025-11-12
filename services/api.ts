@@ -1,6 +1,7 @@
 import type { User, Vendor } from '../types';
 
-const API_URL = 'http://localhost:4000/api';
+const API_URL = import.meta.env.VITE_API_URL + '/api';
+
 
 export const addUser = async (userData: Omit<User, 'id'>): Promise<User> => {
     const response = await fetch(`${API_URL}/users`, {
