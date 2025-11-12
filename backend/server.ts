@@ -7,6 +7,11 @@ const port = 4000;
 
 app.use(cors());
 app.use(express.json());
+app.use(cors({
+  origin: ["https://nashik-local.vercel.app"],
+  credentials: true
+}));
+
 
 const mockUsers: User[] = [
   { id: 1, name: 'Ramesh Patil', email: 'vendor1@example.com', phone: '9876543210', address: 'Mhasrul, Nashik', type: 'vendor' },
